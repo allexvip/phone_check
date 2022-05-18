@@ -17,6 +17,25 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
+async def check_zvonili(phone):
+    result_str = ''
+    phone = re.sub('^(\+7|7|8)', '', phone)
+    headers = {
+        'User-Agent': 'My User Agent 1.0',
+        'From': 'youremail@domain.com'  # This is another valid field
+    }
+    try:
+        if len(phone) == 10:
+            r = requests.get('https://zvonili.com/phone/+7{0}'.format(
+                phone
+            ), headers=headers)
+            html = r.text
+            result_str = re.sub('.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s','','<table class="mb-3">'+html.split('<table class="mb-3">')[1].split('</table>')[0]).replace('  ','\n')
+        else:
+            result_str = 'No info'
+    except:
+        result_str = 'No info'
+    return result_str
 
 async def check_phone_number(phone):
     result = {}
@@ -27,7 +46,7 @@ async def check_phone_number(phone):
             config['PHONE_CHECK_URL'],
         ))
         html = r.text
-        result['phone'] = '+7{0}'.format(phone)
+        result['phone'] = '+7{0} {1}'.format(phone,await check_zvonili(phone))
         result['operator'] = html.split('Оператор: ')[1].split('<br>')[0]
         result['region'] = html.split('Регион: ')[1].split('"')[0].split('<br>')[0]
     else:
@@ -49,7 +68,7 @@ async def send_welcome(message: types.Message):
 
 @dp.message_handler()
 async def other(message: types.Message):
-
+    await bot.send_chat_action(message.from_user.id, 'typing')
     check_num = bool(
         re.match(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$', message.text)
     )
