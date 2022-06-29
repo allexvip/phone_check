@@ -44,7 +44,7 @@ async def check_phone_number(phone):
         r = requests.get('{1}{0}'.format(
             phone,
             config['PHONE_CHECK_URL'],
-        ))
+        ), verify=False)
         html = r.text
         result['phone'] = '+7{0} {1}'.format(phone,await check_zvonili(phone))
         result['operator'] = html.split('Оператор: ')[1].split('<br>')[0]
