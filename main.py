@@ -17,43 +17,22 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-async def check_zvonili(phone):
-    result_str = ''
-    phone = re.sub('^(\+7|7|8)', '', phone)
+
+async def get_data(url):
+    res = {}
+    res['state'] = False
     headers = {
         'User-Agent': 'My User Agent 1.0',
         'From': 'youremail@domain.com'  # This is another valid field
     }
     try:
-        if len(phone) == 10:
-            r = requests.get('https://zvonili.com/phone/+7{0}'.format(
-                phone
-            ), headers=headers)
-            html = r.text
-            result_str = re.sub('.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s','','<table class="mb-3">'+html.split('<table class="mb-3">')[1].split('</table>')[0]).replace('  ','\n')
-        else:
-            result_str = 'No info'
-    except:
-        result_str = 'No info'
-    return result_str
-
-async def check_phone_number(phone):
-    result = {}
-    phone = re.sub('^(\+7|7|8)', '', phone)
-    if len(phone) == 10:
-        r = requests.get('{1}{0}'.format(
-            phone,
-            config['PHONE_CHECK_URL'],
-        ), verify=False)
-        html = r.text
-        result['phone'] = '+7{0} {1}'.format(phone,await check_zvonili(phone))
-        result['operator'] = html.split('Оператор: ')[1].split('<br>')[0]
-        result['region'] = html.split('Регион: ')[1].split('"')[0].split('<br>')[0]
-    else:
-        result['phone'] = '+7{0}'.format(phone)
-        result['operator'] = 'Неправильный формат номера.'
-        result['region'] = 'Пришли мне номер телефона в формате +79991234567.'
-    return result
+        r = requests.get(url=url, headers=headers)
+        res['state'] = True
+        res['text'] = r.text
+    except Exception as e:
+        res['info'] = str(e)
+        res['error'] = 'No info'
+    return res
 
 
 @dp.message_handler(commands=['start', 'help'])
@@ -69,24 +48,41 @@ async def send_welcome(message: types.Message):
 @dp.message_handler()
 async def other(message: types.Message):
     await bot.send_chat_action(message.from_user.id, 'typing')
+    msg = re.sub('\s|[-]', '', message.text)
     check_num = bool(
-        re.match(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$', message.text)
+        re.match(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$', msg)
     )
     if check_num:
-        phone_info = await check_phone_number(message.text)
-        answer_text = '<b>{2}</b>\n\n{0}\n{1}'.format(
-            phone_info['operator'],
-            phone_info['region'],
-            phone_info['phone'],
-        )
+        error_text = ''
+        # phone_info = await check_phone_number(msg)
+        msg = msg.replace('+7', '')
+        phone_info = await get_data(f'https://zvonili.com/phone/+7{msg}')
+        # answer_text = '<b>{2}</b>\n\n{0}\n{1}'.format(
+        #     phone_info['operator'],
+        #     phone_info['region'],
+        #     phone_info['phone'],
+        # )
+        # print(phone_info['text'])
+        if phone_info['state']:
+            phone_check_info = re.sub(
+                '.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s', '',
+                '<table class="mb-3">' + phone_info['text'].split('<table class="mb-3">')[1].split('</table>')[
+                    0]).replace('  ', '\n')
+            phone_operator_info = re.sub(
+                '.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s', '',
+                phone_info['text'].split('Номер +')[1].split('</span>')[0]).replace('  ', '\n')
+            answer_text = f'Номер +{phone_operator_info} \n<b>{phone_check_info}</b>'
+        else:
+            answer_text = phone_info['text']
+            error_text = phone_info['error']
         await message.answer(answer_text, parse_mode=types.ParseMode.HTML)
-        await bot.send_message(config['ADMIN_CHATID'],'@{0} ({1} {2} {3})\n{4}'.format(
+        await bot.send_message(config['ADMIN_CHATID'], '@{0} ({1} {2} {3})\n{4}'.format(
             message.from_user.username,
             message.from_user.first_name,
             message.from_user.last_name,
             message.from_user.id,
-            answer_text,
-        ),parse_mode=types.ParseMode.HTML)
+            f'{answer_text} {error_text}',
+        ), parse_mode=types.ParseMode.HTML)
     else:
         await message.answer('Похоже это не номер. \nПришли мне номер телефона в формате: \n\n<b>+79991234567</b>',
                              parse_mode=types.ParseMode.HTML)
