@@ -65,16 +65,16 @@ async def other(message: types.Message):
         # print(phone_info['text'])
         if phone_info['state']:
             try:
+                phone_operator_info = re.sub(
+                    '.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s', '',
+                    phone_info['text'].split('Номер +')[1].split('</span>')[0]).replace('  ', '\n')
                 phone_check_info = re.sub(
                     '.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s', '',
                     '<table class="mb-3">' + phone_info['text'].split('<table class="mb-3">')[1].split('</table>')[
                         0]).replace('  ', '\n')
-                phone_operator_info = re.sub(
-                    '.?table.*[>]|[ <t].*[r]+[>]|[<td>]|[<span].*[\"]+[>]|[<span>]|[/][<span>]|[/][td>]|\s\s|^\s', '',
-                    phone_info['text'].split('Номер +')[1].split('</span>')[0]).replace('  ', '\n')
                 answer_text = f'Номер +{phone_operator_info} \n<b>{phone_check_info}</b>'
             except Exception as e:
-                answer_text = f'Номер +7{msg} \n<b>No info</b>'
+                answer_text = f'Номер +{phone_operator_info} \n<b>No info</b>'
                 error_text = str(e)
         else:
             answer_text = phone_info['text']
