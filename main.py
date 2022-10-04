@@ -31,7 +31,7 @@ async def get_data(url):
         res['text'] = r.text
     except Exception as e:
         res['info'] = str(e)
-        res['error'] = 'No info'
+        res['text'] = 'No info'
     return res
 
 
