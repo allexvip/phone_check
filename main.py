@@ -74,7 +74,7 @@ async def other(message: types.Message):
                     phone_info['text'].split('Номер +')[1].split('</span>')[0]).replace('  ', '\n')
                 answer_text = f'Номер +{phone_operator_info} \n<b>{phone_check_info}</b>'
             except Exception as e:
-                answer_text = 'No info'
+                answer_text = f'Номер +7{msg} \n<b>No info</b>'
                 error_text = str(e)
         else:
             answer_text = phone_info['text']
