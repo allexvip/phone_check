@@ -17,6 +17,10 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
+async def check_phone_number(msg):
+    return bool(
+        re.match(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$', msg)
+    )
 
 async def get_data(url):
     res = {}
@@ -49,9 +53,7 @@ async def send_welcome(message: types.Message):
 async def other(message: types.Message):
     await bot.send_chat_action(message.from_user.id, 'typing')
     msg = re.sub('\s|[-]', '', message.text)
-    check_num = bool(
-        re.match(r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$', msg)
-    )
+    check_num = check_phone_number(msg)
     if check_num:
         error_text = ''
         # phone_info = await check_phone_number(msg)
